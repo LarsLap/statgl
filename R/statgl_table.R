@@ -11,18 +11,42 @@
 #'
 #' @examples
 #' statgl_table(ggplot2::mpg, year_col = year)
-statgl_table <- function(df, year_col, ...) {
-  aligns <- paste0(c("l", rep("r", ncol(df))), collapse = "")
+statgl_table <- function(df, year_col, caption, output_type = "html_document", replace_0s = FALSE, ...){
 
-  if(!missing(year_col)){
-    df <- dplyr::mutate(df, dplyr::across({{year_col}}, as.character))
+
+  if(output_type == "html_document"){
+    aligns <- paste0(c("l", rep("r", ncol(df))), collapse = "")
+
+    if(!missing(year_col)){
+      df <- dplyr::mutate_at(df, rlang::as_name(rlang::enquo(year_col)), as.character)
+    }
+
+    df <- dplyr::mutate_if(df, is.numeric, format, big.mark = ".", decimal.mark = ",")
+
+    if(replace_0s){
+
+      df <- dplyr::mutate_all(df, as.character)
+
+      df <- dplyr::mutate_all(df, trimws)
+
+      df <- dplyr::mutate_all(df, plyr::mapvalues, from = "0", to = "[-]{}", warn_missing = FALSE)
+    }
+
+      if(!missing(caption)){
+        kableExtra::kable_styling(
+          kableExtra::kable(df, align = aligns, caption = caption, ...),
+            bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+
+      }
+      else{
+        kableExtra::kable_styling(
+          kableExtra::kable(df, align = aligns, ...),
+            bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+      }
+
+    }
+  else{
+#    flextable::autofit(statgl_flex(df))
   }
-
-  df <- dplyr::mutate_if(df, is.numeric, format, big.mark = ".", decimal.mark = ",", justify = "right", digits = 3, ...)
-
-  kableExtra::kable_styling(
-    kableExtra::kable(df, align = aligns),
-    bootstrap_options = c("striped", "hover", "condensed", "responsive")
-  )
-
 }
+
